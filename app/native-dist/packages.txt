@@ -1,0 +1,4 @@
+https://github.com/raozhiming/Elastos.NET.Carrier.Native.SDK/releases/download/elastos-carrier-native-5.1.3/elastos-carrier-native-5.1.3-android_arm64-20180921.tar.gz
+https://github.com/raozhiming/Elastos.NET.Carrier.Native.SDK/releases/download/elastos-carrier-native-5.1.3/elastos-carrier-native-5.1.3-android_armv7a-20180921.tar.gz
+https://github.com/raozhiming/Elastos.NET.Carrier.Native.SDK/releases/download/elastos-carrier-native-5.1.3/elastos-carrier-native-5.1.3-android_x86-20180921.tar.gz
+https://github.com/raozhiming/Elastos.NET.Carrier.Native.SDK/releases/download/elastos-carrier-native-5.1.3/elastos-carrier-native-5.1.3-android_x86_64-20180921.tar.gz
