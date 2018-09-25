@@ -15,7 +15,6 @@ install:
   - wget https://dl.google.com/android/repository/android-ndk-r16b-linux-x86_64.zip
   - unzip -q android-ndk-r16b-linux-x86_64.zip
   - export ANDROID_NDK_HOME=/tmp/android-ndk-r16b
-  - curl https://github.com/raozhiming/Elastos.NET.Carrier.Native.SDK/releases/latest
   - curl `curl https://github.com/raozhiming/Elastos.NET.Carrier.Native.SDK/releases/latest  | grep -e "https[a-zA-Z0-9:.<>()_\/\-]*" -o`  | grep -e "/raozhiming.*android.*gz" -o >packages.txt
   - sed -i 's/^/https:\/\/github.com/g' packages.txt
   - wget -i packages.txt
@@ -37,5 +36,4 @@ script:
   - gradle init
   - gradle wrapper
   #- gradle assembleDebug
-  #- gradle lint
-  - gradle connectedAndroidTest
+  - gradle lint && gradle connectedAndroidTest
