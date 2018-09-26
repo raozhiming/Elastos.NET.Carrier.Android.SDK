@@ -29,7 +29,7 @@ install:
   - wget https://dl.google.com/android/repository/android-ndk-r16b-linux-x86_64.zip
   - unzip -q android-ndk-r16b-linux-x86_64.zip
   - export ANDROID_NDK_HOME=/tmp/android-ndk-r16b
-  # - curl `curl https://github.com/elastos/Elastos.NET.Carrier.Native.SDK/releases/latest  | grep -e "https[a-zA-Z0-9:.<>()_\/\-]*" -o`  | grep -e "/elastos.*android.*gz" -o >packages.txt  - curl `curl https://github.com/elastos/Elastos.NET.Carrier.Native.SDK/releases/latest  | grep -e "https[a-zA-Z0-9:.<>()_\/\-]*" -o`  | grep -e "/elastos.*android.*gz" -o >packages.txt
+  # - curl `curl https://github.com/elastos/Elastos.NET.Carrier.Native.SDK/releases/latest  | grep -e "https[a-zA-Z0-9:.<>()_\/\-]*" -o`  | grep -e "/elastos.*android.*gz" -o >packages.txt
   - curl https://github.com/elastos/Elastos.NET.Carrier.Native.SDK/releases/tag/internal-test | grep -e "/elastos.*android.*gz" -o >packages.txt
   - sed -i 's/^/https:\/\/github.com/g' packages.txt
   - wget -i packages.txt
