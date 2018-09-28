@@ -17,14 +17,7 @@ public class TestCondition {
         private int mSignaled;
     }
 
-//    static void cond_init(ConditionArgs cond)
-//    {
-//        pthread_mutex_init(&cond->mutex, 0);
-//        pthread_cond_init(&cond->cond, 0);
-//        cond->signaled = 0;
-//    }
-
-    public static void cond_wait(ConditionArgs cond)
+    public static void condWait(ConditionArgs cond)
     {
         cond.mLock.lock();
         try {
@@ -41,7 +34,7 @@ public class TestCondition {
         }
     }
 
-    public static boolean cond_trywait(ConditionArgs cond, int ms)
+    public static boolean condTrywait(ConditionArgs cond, int ms)
     {
         boolean bRet = false;
         cond.mLock.lock();
@@ -71,7 +64,7 @@ public class TestCondition {
         return bRet;
     }
 
-    public static void cond_signal(ConditionArgs cond)
+    public static void condSignal(ConditionArgs cond)
     {
         cond.mLock.lock();
         try {
@@ -86,7 +79,7 @@ public class TestCondition {
         }
     }
 
-    public static void cond_reset(ConditionArgs cond)
+    public static void condReset(ConditionArgs cond)
     {
         cond.mLock.lock();
         try {
@@ -105,7 +98,7 @@ public class TestCondition {
         }
     }
 
-    public static void cond_deinit(ConditionArgs cond)
+    public static void condDeinit(ConditionArgs cond)
     {
         cond.mSignaled = 0;
     }

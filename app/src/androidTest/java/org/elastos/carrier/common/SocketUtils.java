@@ -1,9 +1,6 @@
 package org.elastos.carrier.common;
 
-import android.support.v4.app.NavUtils;
-
 import org.elastos.carrier.Log;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -85,7 +82,7 @@ public class SocketUtils {
         }
     }
 
-    public int write_cmd(String cmd2Robot)
+    public int sendData2Robot(String cmd2Robot)
     {
         OutputStream outputStream = null;
         try {
@@ -110,7 +107,7 @@ public class SocketUtils {
         return 1;
     }
 
-    public int read_ack(TestCmds cmds)
+    public int recvDataFromRobot(TestRecvDataArgs args)
     {
         BufferedReader br = null;
         int length = 0;
@@ -120,8 +117,8 @@ public class SocketUtils {
             br = new BufferedReader(isr);
             String revData = br.readLine();
             Log.d(TAG, "revData==========="+revData);
-            cmds.args = revData.split("\\s+");
-            length = cmds.args.length;
+            args.mArgs = revData.split("\\s+");
+            length = args.mArgs.length;
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -143,8 +140,8 @@ public class SocketUtils {
         return length;
     }
 
-    public static class TestCmds {
-        public TestCmds() {}
-        public String[] args = null;
+    public static class TestRecvDataArgs {
+        public TestRecvDataArgs() {}
+        public String[] mArgs = null;
     };
 }

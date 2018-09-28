@@ -10,9 +10,8 @@ import org.elastos.carrier.common.TestContext;
 import org.elastos.carrier.common.TestContext.CarrierContext;
 import org.elastos.carrier.common.TestOptions;
 import org.elastos.carrier.common.SocketUtils;
-import org.elastos.carrier.common.SocketUtils.TestCmds;
+import org.elastos.carrier.common.SocketUtils.TestRecvDataArgs;
 import org.elastos.carrier.exceptions.ElastosException;
-import org.elastos.carrier.robot.RobotProxy;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -31,22 +30,22 @@ public class FriendRequestTest {
     private static String ROBOTHOST = "192.168.0.107";
     private static String ROBOTPORT = "8888";
     private static SocketUtils mSocketUtils = null;
-    private static String robotid = null;
-    private static String robotaddr = null;
+    private static String mRobotId = null;
+    private static String mRobotAddress = null;
 
     static class TestHandler extends AbstractCarrierHandler {
         @Override
         public void onReady(Carrier carrier) {
-            ready_cb(sTestContext);
+            TestCondition.condSignal(sTestContext.mReadyCond);
             Log.d(TAG, "============================onReady=====================");
         }
 
         @Override
         public void onFriendConnection(Carrier carrier, String friendId, ConnectionStatus status) {
-            CarrierContext wctxt = sTestContext;
+            CarrierContext context = sTestContext;
 
-            ((CarrierContextExtra)wctxt.extra).connection_status = status;
-            wctxt.robot_online = (status == ConnectionStatus.Connected);
+            ((CarrierContextExtra)context.mExtra).mConnectionStatus = status;
+            context.mRobotIsOnline = (status == ConnectionStatus.Connected);
             wakeup(sTestContext);
 
             Log.d(TAG, "Robot connection status changed -> " + status.toString());
@@ -54,11 +53,11 @@ public class FriendRequestTest {
 
         @Override
         public void onFriendRequest(Carrier carrier, String userId, UserInfo info, String hello) {
-            CarrierContextExtra extra = (CarrierContextExtra)sTestContext.extra;
+            CarrierContextExtra extra = (CarrierContextExtra)sTestContext.mExtra;
 
-            extra.from  = userId;
-            extra.hello = hello;
-            extra.info = info;
+            extra.mFrom  = userId;
+            extra.mHello = hello;
+            extra.mUserInfo = info;
 
             wakeup(sTestContext);
         }
@@ -77,129 +76,120 @@ public class FriendRequestTest {
     }
 
     @Test
-    public void test_add_friend()
+    public void testAddFriend()
     {
-        CarrierContext wctxt = sTestContext;
-        CarrierContextExtra extra = (CarrierContextExtra)wctxt.extra;
-        String userid = null;
+        CarrierContext context = sTestContext;
+        CarrierContextExtra extra = (CarrierContextExtra)context.mExtra;
+        String userId = null;
 
-        TestCondition.cond_reset(sTestContext.cond);
+        TestCondition.condReset(sTestContext.mCond);
 
-        int rc = remove_friend_anyway(robotid);
+        int rc = removeFriendAnyway(mRobotId);
         assertEquals(rc, 0);
 
         try {
-            assertFalse(sTestContext.carrier.isFriend(robotid));
-            wctxt.carrier.addFriend(robotaddr, "hello");
+            assertFalse(sTestContext.mCarrier.isFriend(mRobotId));
+            context.mCarrier.addFriend(mRobotAddress, "hello");
 
             // wait until robot having received "fadd” request.
-            TestCmds cmds = new TestCmds();
-            rc = read_ack(cmds);
+            TestRecvDataArgs args = new TestRecvDataArgs();
+            rc = recvDataFromRobot(args);
             assertEquals(rc, 2);
-            assertEquals(cmds.args[0], "hello");
-            assertEquals(cmds.args[1], "hello");
+            assertEquals(args.mArgs[0], "hello");
+            assertEquals(args.mArgs[1], "hello");
 
-            userid = wctxt.carrier.getUserId();
-            rc = write_cmd("faccept " + userid + "\n");
+            userId = context.mCarrier.getUserId();
+            rc = sendData2Robot("faccept " + userId + "\n");
             assertTrue(rc > 0);
 
             // wait for friend_added() callback to be invoked.
-            TestCondition.cond_trywait(wctxt.cond, 60000);
-            assertTrue(wctxt.carrier.isFriend(robotid));
+            TestCondition.condTrywait(context.mCond, 60000);
+            assertTrue(context.mCarrier.isFriend(mRobotId));
             // wait for friend connection (online) callback to be invoked.
-            TestCondition.cond_wait(wctxt.cond);
-            assertTrue(extra.connection_status == ConnectionStatus.Connected);
+            TestCondition.condWait(context.mCond);
+            assertTrue(extra.mConnectionStatus == ConnectionStatus.Connected);
 
-            TestCmds cmds2 = new TestCmds();
-            rc = read_ack(cmds2);
+            TestRecvDataArgs cmds2 = new TestRecvDataArgs();
+            rc = recvDataFromRobot(cmds2);
             assertEquals(rc, 2);
-            assertEquals(cmds.args[0], "fadd");
-            assertEquals(cmds.args[1], "succeeded");
+            assertEquals(args.mArgs[0], "fadd");
+            assertEquals(args.mArgs[1], "succeeded");
         }
         catch (ElastosException e) {
-            e.printStackTrace();
-            assertTrue(false);
-        }
-        catch (Exception e) {
             e.printStackTrace();
             assertTrue(false);
         }
     }
 
     @Test
-    public void test_accept_friend()
+    public void testAcceptFriend()
     {
-        CarrierContext wctxt = sTestContext;
-        CarrierContextExtra extra = (CarrierContextExtra)wctxt.extra;
-        String userid = null;
-        String useraddr = null;
+        CarrierContext context = sTestContext;
+        CarrierContextExtra extra = (CarrierContextExtra)context.mExtra;
+        String userId = null;
+        String userAddr = null;
         final String hello = "hello";
         int rc = 0;
 
-        TestCondition.cond_reset(sTestContext.cond);
+        TestCondition.condReset(sTestContext.mCond);
 
-        rc = remove_friend_anyway(robotid);
+        rc = removeFriendAnyway(mRobotId);
         assertEquals(rc, 0);
 
         try {
-            assertFalse(wctxt.carrier.isFriend(robotid));
-            userid = wctxt.carrier.getUserId();
-            useraddr = wctxt.carrier.getAddress();
+            assertFalse(context.mCarrier.isFriend(mRobotId));
+            userId = context.mCarrier.getUserId();
+            userAddr = context.mCarrier.getAddress();
 
-            rc = write_cmd("fadd " + userid + useraddr + hello + "\n");
+            rc = sendData2Robot("fadd " + userId + userAddr + hello + "\n");
             assertTrue(rc > 0);
 
             // wait for friend_request callback invoked;
-            TestCondition.cond_trywait(wctxt.cond, 60000);
-            assertTrue(extra.from != null);
-            assertTrue(extra.hello != null);
+            TestCondition.condTrywait(context.mCond, 60000);
+            assertTrue(extra.mFrom != null);
+            assertTrue(extra.mHello != null);
 
-            assertEquals(extra.from, robotid);
-            assertEquals(extra.from, extra.info.getUserId());
-            assertEquals(extra.hello, hello);
-            //TODO: test robot user info;
+            assertEquals(extra.mFrom, mRobotId);
+            assertEquals(extra.mFrom, extra.mUserInfo.getUserId());
+            assertEquals(extra.mHello, hello);
 
-            wctxt.carrier.acceptFriend(robotid);
+            context.mCarrier.acceptFriend(mRobotId);
 
             // wait for friend added callback invoked;
-            TestCondition.cond_wait(wctxt.cond);
-            assertTrue(wctxt.carrier.isFriend(robotid));
+            TestCondition.condWait(context.mCond);
+            assertTrue(context.mCarrier.isFriend(mRobotId));
 
             // wait for friend connection (online) callback invoked.
-            TestCondition.cond_wait(wctxt.cond);
-            assertTrue(extra.connection_status == ConnectionStatus.Connected);
+            TestCondition.condWait(context.mCond);
+            assertTrue(extra.mConnectionStatus == ConnectionStatus.Connected);
 
-            TestCmds cmds = new TestCmds();
-            rc = read_ack(cmds);
+            TestRecvDataArgs args = new TestRecvDataArgs();
+            rc = recvDataFromRobot(args);
             assertEquals(rc, 2);
-            assertEquals(cmds.args[0], "fadd");
-            assertEquals(cmds.args[1], "succeeded");
+            assertEquals(args.mArgs[0], "fadd");
+            assertEquals(args.mArgs[1], "succeeded");
         }
         catch (ElastosException e) {
-            e.printStackTrace();
-            assertTrue(false);
-        }
-        catch (Exception e) {
             e.printStackTrace();
             assertTrue(false);
         }
     }
 
     @Test
-    public void test_add_friend_be_friend()
+    public void testAddFriendBeFriend()
     {
-        CarrierContext wctxt = sTestContext;
+        CarrierContext context = sTestContext;
         int rc;
 
-        TestCondition.cond_reset(sTestContext.cond);
+        TestCondition.condReset(sTestContext.mCond);
 
         try {
-            Log.d(TAG, "robotid=["+robotid+"], robotaddr=["+robotaddr+"]");
-            rc = add_friend_anyway(robotid, robotaddr);
+            Log.d(TAG, "robotid=["+mRobotId+"], robotaddr=["+mRobotAddress+"]");
+            rc = addFriendAnyway(mRobotId, mRobotAddress);
             assertEquals(rc, 0);
-            assertTrue(wctxt.carrier.isFriend(robotid));
+            assertTrue(context.mCarrier.isFriend(mRobotId));
 
-            wctxt.carrier.addFriend(robotaddr, "hello");
+            context.mCarrier.addFriend(mRobotAddress, "hello");
         }
         catch (ElastosException e) {
             e.printStackTrace();
@@ -212,16 +202,16 @@ public class FriendRequestTest {
     }
 
     @Test
-    public void test_add_self_be_friend()
+    public void testAddSelfBeFriend()
     {
-        CarrierContext wctxt = sTestContext;
+        CarrierContext context = sTestContext;
         int rc;
 
         String address = null;
 
         try {
-            address = wctxt.carrier.getAddress();
-            wctxt.carrier.addFriend(address, "hello");
+            address = context.mCarrier.getAddress();
+            context.mCarrier.addFriend(address, "hello");
         }
         catch (ElastosException e) {
             e.printStackTrace();
@@ -243,12 +233,11 @@ public class FriendRequestTest {
             }
 
             //Get the robot's id and address.
-            //TODO
-            TestCmds cmds = new TestCmds();
-            if (mSocketUtils.read_ack(cmds) > 0 && cmds.args[0].equals("ready")) {
-                robotid = cmds.args[1];
-                robotaddr = cmds.args[2];
-                Log.d(TAG, "robotaddr=["+robotaddr+"], robotid=["+robotid+"]");
+            TestRecvDataArgs args = new TestRecvDataArgs();
+            if (recvDataFromRobot(args) > 0 && args.mArgs[0].equals("ready")) {
+                mRobotId = args.mArgs[1];
+                mRobotAddress = args.mArgs[2];
+                Log.d(TAG, "robotaddr=["+mRobotAddress+"], robotid=["+mRobotId+"]");
             }
             else {
                 mSocketUtils.disconnectRobot();
@@ -264,25 +253,24 @@ public class FriendRequestTest {
         sCarrierOptions = new TestOptions(getAppPath());
         sTestHandler = new TestHandler();
         sTestContext = new CarrierContext();
-        sTestContext.extra = new CarrierContextExtra();
+        sTestContext.mExtra = new CarrierContextExtra();
 
         try {
             Carrier.initializeInstance(sCarrierOptions, sTestHandler);
-            sTestContext.carrier = Carrier.getInstance();
+            sTestContext.mCarrier = Carrier.getInstance();
 
-            TestCondition.cond_reset(sTestContext.cond);
-            TestCondition.cond_reset(sTestContext.ready_cond);
+            TestCondition.condReset(sTestContext.mCond);
+            TestCondition.condReset(sTestContext.mReadyCond);
 
-            sTestContext.carrier.start(10);
+            sTestContext.mCarrier.start(10);
 
             //The self carrier node will be ready.
-            TestCondition.cond_wait(sTestContext.ready_cond);
+            TestCondition.condWait(sTestContext.mReadyCond);
 
             Log.i(TAG, "carrier client is ready now");
 
-        } catch (ElastosException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
+        }
+        catch (ElastosException e) {
             e.printStackTrace();
         }
     }
@@ -290,21 +278,21 @@ public class FriendRequestTest {
     @AfterClass
     public static void tearDown() {
         try {
-            sTestContext.carrier.kill();
+            sTestContext.mCarrier.kill();
         }
         catch(Exception e) {
             e.printStackTrace();
         }
     }
 
-    private int add_friend_anyway(String userid, String address)
+    private int addFriendAnyway(String userId, String address)
     {
         CarrierContext wctxt = sTestContext;
         int rc;
 
         try {
-            if (wctxt.carrier.isFriend(userid)) {
-                while(!wctxt.robot_online) {
+            if (wctxt.mCarrier.isFriend(userId)) {
+                while(!wctxt.mRobotIsOnline) {
                     //sleep 500 microseconds = 500 * 1000 nanoseconds
                     Thread.sleep(0, 500 * 1000);
                 }
@@ -312,27 +300,27 @@ public class FriendRequestTest {
                 return 1;
             }
 
-            wctxt.carrier.addFriend(address, "auto-reply");
+            wctxt.mCarrier.addFriend(address, "auto-reply");
 
             // wait for friend_added callback invoked.
-            TestCondition.cond_wait(wctxt.cond);
+            TestCondition.condWait(wctxt.mCond);
 
             // wait for friend_connection (online) callback invoked.
-            TestCondition.cond_wait(wctxt.cond);
+            TestCondition.condWait(wctxt.mCond);
 
             // wait until robot being notified us connected.
-            TestCmds cmds = new TestCmds();
-            rc = read_ack(cmds);
+            TestRecvDataArgs args = new TestRecvDataArgs();
+            rc = recvDataFromRobot(args);
             assertEquals(rc, 2);
-            assertEquals(cmds.args[0], "fadd");
-            assertEquals(cmds.args[1], "succeeded");
+            assertEquals(args.mArgs[0], "fadd");
+            assertEquals(args.mArgs[1], "succeeded");
         }
         catch (ElastosException e) {
             e.printStackTrace();
             assertTrue(false);
             return -1;
         }
-        catch (Exception e) {
+        catch (InterruptedException e) {
             e.printStackTrace();
             assertTrue(false);
             return -1;
@@ -341,41 +329,41 @@ public class FriendRequestTest {
         return 0;
     }
 
-    private int remove_friend_anyway(String userid)
+    private int removeFriendAnyway(String userId)
     {
         CarrierContext wctxt = sTestContext;
         try {
-            if (!wctxt.carrier.isFriend(userid)) {
-                while (wctxt.robot_online) {
+            if (!wctxt.mCarrier.isFriend(userId)) {
+                while (wctxt.mRobotIsOnline) {
                     //sleep 500 microseconds = 500 * 1000 nanoseconds
                     Thread.sleep(0, 500 * 1000);
                 }
                 return 0;
             } else {
-                while (!wctxt.robot_online) {
+                while (!wctxt.mRobotIsOnline) {
                     //sleep 500 microseconds = 500 * 1000 nanoseconds
                     Thread.sleep(0, 500 * 1000);
                 }
             }
 
-            wctxt.carrier.removeFriend(userid);
+            wctxt.mCarrier.removeFriend(userId);
 
-            UserInfo info = wctxt.carrier.getSelfInfo();
+            UserInfo info = wctxt.mCarrier.getSelfInfo();
 
-            write_cmd("fremove " + info.getUserId());
+            sendData2Robot("fremove " + info.getUserId());
 
             // wait for friend_connection (online -> offline) callback invoked.
-            TestCondition.cond_wait(wctxt.cond);
+            TestCondition.condWait(wctxt.mCond);
 
             // wait for friend_removed callback invoked.
-            TestCondition.cond_wait(wctxt.cond);
+            TestCondition.condWait(wctxt.mCond);
 
             // wait for completion of robot "fremove" command.
-            TestCmds cmds = new TestCmds();
-            int count = read_ack(cmds);
+            TestRecvDataArgs args = new TestRecvDataArgs();
+            int count = recvDataFromRobot(args);
             assertEquals(count, 2);
-            assertEquals(cmds.args[0], "fremove");
-            assertEquals(cmds.args[1], "succeeded");
+            assertEquals(args.mArgs[0], "fremove");
+            assertEquals(args.mArgs[1], "succeeded");
         }
         catch (ElastosException e) {
             e.printStackTrace();
@@ -388,12 +376,12 @@ public class FriendRequestTest {
         return 0;
     }
 
-    private int write_cmd(String cmd2Robot) {
-        return mSocketUtils.write_cmd(cmd2Robot);
+    private static int sendData2Robot(String cmd2Robot) {
+        return mSocketUtils.sendData2Robot(cmd2Robot);
     }
 
-    private int read_ack(TestCmds cmds) {
-        return mSocketUtils.read_ack(cmds);
+    private static int recvDataFromRobot(TestRecvDataArgs args) {
+        return mSocketUtils.recvDataFromRobot(args);
     }
 
     private static Context getAppContext() {
@@ -406,30 +394,23 @@ public class FriendRequestTest {
 
     static void wakeup(CarrierContext context)
     {
-        TestCondition.cond_signal(context.cond);
-    }
-
-    static void ready_cb(CarrierContext context)
-    {
-        TestCondition.cond_signal(context.ready_cond);
+        TestCondition.condSignal(context.mCond);
     }
 
     static class CarrierContextExtra extends TestContext.AbsCarrierContextExtra {
         CarrierContextExtra() {
             super();
-            from = null;
-            info = null;
-            hello = null;
-            len = 0;
-            connection_status = ConnectionStatus.Disconnected;
+            mFrom = null;
+            mUserInfo = null;
+            mHello = null;
+            mConnectionStatus = ConnectionStatus.Disconnected;
         }
 
-        String from;
+        String mFrom;
         // for friend request
-        UserInfo info;
+        UserInfo mUserInfo;
 
-        String hello;
-        int len;
-        ConnectionStatus connection_status;
+        String mHello;
+        ConnectionStatus mConnectionStatus;
     };
 }
