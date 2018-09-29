@@ -12,6 +12,8 @@ import java.net.UnknownHostException;
 public class SocketUtils {
     private static final String TAG = "Test.SocketUtils";
     private Socket mSocket = null;
+    private OutputStream mOutputStream = null;
+    private BufferedReader mBufferedReader = null;
 
     public SocketUtils(){}
 
@@ -37,8 +39,6 @@ public class SocketUtils {
                     e.printStackTrace();
                 }
                 catch (Exception e) {
-                    Log.d(TAG, "===================errrr===========================");
-                    ntries++;
                     e.printStackTrace();
                 }
 
@@ -51,6 +51,7 @@ public class SocketUtils {
                 }
 
                 Log.d(TAG, "Connecting to test rebot failed, try again");
+                ntries++;
                 Thread.sleep(1 * 1000);
             }
 
@@ -80,28 +81,47 @@ public class SocketUtils {
 
             Log.d(TAG, "Disconnected robot.");
         }
+
+        if (mOutputStream != null) {
+            try {
+                mOutputStream.close();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+
+        if (mBufferedReader != null) {
+            try {
+                mBufferedReader.close();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
     }
 
     public int sendData2Robot(String cmd2Robot)
     {
         OutputStream outputStream = null;
         try {
-            outputStream = mSocket.getOutputStream();
-            outputStream.write(cmd2Robot.getBytes("utf-8"));
-            outputStream.flush();
+            if (mSocket.isConnected()) {
+                if (mOutputStream == null) {
+                    mOutputStream = mSocket.getOutputStream();
+                }
+
+                outputStream = mOutputStream;
+                outputStream.write((cmd2Robot + "\n").getBytes("utf-8"));
+                outputStream.flush();
+            }
+            else {
+                Log.d(TAG, "the robot' connection is broken.");
+                return -1;
+            }
         }
         catch (IOException e) {
             e.printStackTrace();
             return 0;
-        }
-        finally {
-            if (outputStream != null) {
-                try {
-                    outputStream.close();
-                }
-                catch (IOException e){
-                }
-            }
         }
 
         return 1;
@@ -112,9 +132,13 @@ public class SocketUtils {
         BufferedReader br = null;
         int length = 0;
         try {
-            InputStream is = mSocket.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
-            br = new BufferedReader(isr);
+            if (mBufferedReader == null) {
+                InputStream is = mSocket.getInputStream();
+                InputStreamReader isr = new InputStreamReader(is);
+                mBufferedReader = new BufferedReader(isr);
+            }
+
+            br = mBufferedReader;
             String revData = br.readLine();
             Log.d(TAG, "revData==========="+revData);
             args.mArgs = revData.split("\\s+");
@@ -127,16 +151,6 @@ public class SocketUtils {
         catch (Exception e) {
             e.printStackTrace();
         }
-        finally {
-            if (br != null) {
-                try {
-                    br.close();
-                }
-                catch (IOException e){
-                }
-            }
-        }
-
         return length;
     }
 

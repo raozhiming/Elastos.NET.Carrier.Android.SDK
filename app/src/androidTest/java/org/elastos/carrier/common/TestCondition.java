@@ -87,13 +87,12 @@ public class TestCondition {
             while (cond.mCond.awaitNanos(timeout) > 0) {
                 //
             }
-
-            cond.mSignaled++;
         }
         catch (Exception e) {
             e.printStackTrace();
         }
         finally {
+            cond.mSignaled = 0;
             cond.mLock.unlock();
         }
     }
