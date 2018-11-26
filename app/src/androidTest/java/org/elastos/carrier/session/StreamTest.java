@@ -14,8 +14,11 @@ import org.elastos.carrier.common.TestHelper;
 import org.elastos.carrier.common.TestOptions;
 import org.elastos.carrier.exceptions.CarrierException;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import java.util.Random;
@@ -39,6 +42,9 @@ public class StreamTest {
 	private static final TestStreamHandler streamHandler = new TestStreamHandler();
 	private static Session session;
 	private static Stream stream;
+
+	@Rule
+	public Timeout globalTimeout = Timeout.seconds(300);
 
 	static class TestHandler extends AbstractCarrierHandler {
 		private TestContext mContext;
@@ -181,7 +187,7 @@ public class StreamTest {
 	static class TestSessionRequestCompleteHandler implements SessionRequestCompleteHandler {
 		@Override
 		public void onCompletion(Session session, int status, String reason, String sdp) {
-			Log.d(TAG, String.format("Session complete, status: %d, reason: %s", status, reason));
+			Log.d(TAG, String.format("SessionRequestcomplete, status: %d, reason: %s", status, reason));
 			LocalData data = (LocalData)context.getExtra().getExtraData();
 			data.mCompleteStatus = status;
 
@@ -204,8 +210,8 @@ public class StreamTest {
 	private static int sReturnValue = 0;
 	private static void doBulkWrite()
 	{
-		final int MIN_DATA_SIZE = 1024*1024*10;
-		final int MAX_DATA_SIZE = 1024*1024*100;
+		final int MIN_DATA_SIZE = 1024*1024*2;
+		final int MAX_DATA_SIZE = 1024*1024*50;
 
 		final int MIN_PACKET_SIZE = 1024;
 		final int MAX_PACKET_SIZE = 2048;
@@ -233,9 +239,9 @@ public class StreamTest {
 						, packet_count, packet_size));
 
 				int rc = 0;
-
 				byte[] charBytes = TestHelper.getBytes(packet);
 				long start = System.currentTimeMillis();
+
 				for (int i = 0; i < packet_count; i++) {
 					int sent = 0;
 
@@ -264,6 +270,9 @@ public class StreamTest {
 
 						sent += rc;
 					} while (sent < packet_size);
+
+					if (i % 2000 == 0)
+						Log.d(TAG, "i = " + i);
 				}
 				long end = System.currentTimeMillis();
 
@@ -525,5 +534,10 @@ public class StreamTest {
 		if (isConnectToRobot) {
 			robot.disconnect();
 		}
+	}
+
+	@Before
+	public void setUpCase() {
+		robot.clearSocketBuffer();
 	}
 }

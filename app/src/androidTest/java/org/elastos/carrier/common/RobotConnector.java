@@ -1,13 +1,21 @@
 package org.elastos.carrier.common;
 
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
 import org.elastos.carrier.Log;
 import org.elastos.carrier.robot.Robot;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.URL;
+
+import static android.content.Context.CONNECTIVITY_SERVICE;
 
 public class RobotConnector extends Socket {
 	private static final String TAG = "RobotConnector";
@@ -15,6 +23,7 @@ public class RobotConnector extends Socket {
 	private BufferedReader mBufferedReader = null;
 	private String mRobotId = null;
 	private String mRobotAddress = null;
+	private  int SOCKET_TIMEOUT = 120000;
 
 	public static RobotConnector getInstance() {
 		if (robotConnector == null)
@@ -33,10 +42,18 @@ public class RobotConnector extends Socket {
 
 		try {
 			InetSocketAddress address = new InetSocketAddress(host, Integer.parseInt(port));
+			Log.e(TAG, "start connect ");
 			connect(address);
+			setSoTimeout(SOCKET_TIMEOUT);
 		}
 		catch (IOException e) {
+			Log.e(TAG, "connect failed");
 			e.printStackTrace();
+			Log.e(TAG, e.getMessage());
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			Log.e(TAG, e.getMessage());
 		}
 
 		if (isConnected()) {
@@ -49,13 +66,39 @@ public class RobotConnector extends Socket {
 				return true;
 			}
 
-			return false;
+			Log.e(TAG, "can't get robot info");
 		}
 		else {
-			Log.w(TAG, String.format("Connect to robot (%s:%s) failed", host, port));
+			Log.e(TAG, String.format("Connect to robot (%s:%s) failed", host, port));
 		}
 
-		return isConnected();
+		return false;
+	}
+
+	public boolean clearSocketBuffer() {
+		if (isConnected()) {
+			try {
+				String[] args;
+				Log.d(TAG, "clear socket buffer");
+				setSoTimeout(100);
+				do {
+					args = readAck();
+				} while (args != null);
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+			finally {
+				try {
+					setSoTimeout(SOCKET_TIMEOUT);
+				} catch (SocketException e) {
+					e.printStackTrace();
+				}
+			}
+			return true;
+		}
+
+		return false;
 	}
 
 	public void disconnect() {
@@ -85,6 +128,8 @@ public class RobotConnector extends Socket {
 			return false;
 		}
 
+		Log.d(TAG, "writeCmd :" + command);
+
 		try {
 			getOutputStream().write((command + "\n").getBytes("utf-8"));
 			getOutputStream().flush();
@@ -99,20 +144,20 @@ public class RobotConnector extends Socket {
 	}
 
 	public String[] readAck() {
-		BufferedReader br;
 		try {
 			if (mBufferedReader == null) {
 				InputStreamReader isr = new InputStreamReader(getInputStream());
 				mBufferedReader = new BufferedReader(isr);
 			}
 
-			br = mBufferedReader;
-			String revData = br.readLine();
+			String revData = mBufferedReader.readLine();
 			Log.d(TAG, "revData==========="+revData);
 			return revData.split("\\s+");
 		}
 		catch (IOException e) {
-			e.printStackTrace();
+//			e.printStackTrace();
+//			String msg = e.getMessage();
+//			if (msg != null) Log.e(TAG, msg);
 		}
 		return null;
 	}

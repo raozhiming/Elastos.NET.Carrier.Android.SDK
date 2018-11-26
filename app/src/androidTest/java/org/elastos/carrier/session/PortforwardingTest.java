@@ -16,8 +16,11 @@ import org.elastos.carrier.common.TestOptions;
 import org.elastos.carrier.exceptions.CarrierException;
 import org.elastos.carrier.robot.Robot;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import java.io.DataInputStream;
@@ -56,6 +59,9 @@ public class PortforwardingTest {
 	private static ServerSocket localServer;
 	private static Socket localClient;
 	private static final String localIP = getLocalIpAddress();
+
+	@Rule
+	public Timeout globalTimeout = Timeout.seconds(300);
 
 	static class TestHandler extends AbstractCarrierHandler {
 		private TestContext mContext;
@@ -255,6 +261,7 @@ public class PortforwardingTest {
 			synchronized (streamHandler) {
 				streamHandler.wait(1000);
 			}
+
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.TransportReady, data.mState);
 
@@ -274,6 +281,7 @@ public class PortforwardingTest {
 			assertEquals(0, data.mCompleteStatus);
 
 			args = robot.readAck();
+
 			assertTrue(args != null && args.length == 2);
 			assertEquals("sreply", args[0]);
 			assertEquals("success", args[1]);
@@ -323,24 +331,32 @@ public class PortforwardingTest {
 	private void serverThreadBody(final LocalPortforwardingData ctxt) {
 		try {
 			ctxt.returnValue = -1;
+
 			localServer = new ServerSocket(port, 10, InetAddress.getByName(localIP));
 			Log.d(TAG, "server begin to receive data:");
 
 			Socket client = localServer.accept();
+			Log.d(TAG, "serverThreadBody after accept");
 			DataInputStream reader = new DataInputStream(client.getInputStream());
 			int readLen;
 			byte[] dataBuffer = new byte[1024];
+			long start = System.currentTimeMillis();
+			long duration;
+			float speed;
 
 			while (true) {
 				try {
 					readLen = reader.read(dataBuffer);
 					if (readLen == -1) {
+						Log.d(TAG, "serverThreadBody read error break");
 						break;
 					}
-					Log.d(TAG, String.format("recv len=[%d], msg[%s]", ctxt.recvCount, (new String(dataBuffer))));
+
+					if (ctxt.recvCount % 10000 == 0) Log.d(TAG, String.format("recv len=[%d]", ctxt.recvCount));
 					ctxt.recvCount += readLen;
 				}
 				catch (EOFException e) {
+					Log.e(TAG, "serverThreadBody EOFException");
 					break;
 				}
 			}
@@ -348,6 +364,14 @@ public class PortforwardingTest {
 			ctxt.recvCount /= 1024;
 			Log.d(TAG, String.format("finished receiving %d Kbytes data, closed by remote peer.",
 					ctxt.recvCount));
+
+			long end = System.currentTimeMillis();
+			duration = end - start;
+			speed = (((float)ctxt.recvCount / duration) * 1000);
+
+			Log.d(TAG, "Finished writing");
+			Log.d(TAG, String.format("Total %d KB in %d.%d seconds. %.2f KB/s",
+					ctxt.recvCount,	(int)(duration / 1000), (int)(duration % 1000), speed));
 			ctxt.returnValue = 0;
 		}
 		catch (IOException e) {
@@ -368,29 +392,43 @@ public class PortforwardingTest {
 
 	private void clientThreadBody(final LocalPortforwardingData ctxt) {
 		try {
+			Log.d(TAG, String.format("clientThreadBody new Socket %s  %s", ctxt.ip, ctxt.port));
 			localClient = new Socket(ctxt.ip, ctxt.port);
 			char[] data = new char[1024];
 			for (int i = 0; i < 1024; i++) {
 				data[i] = 'D';
 			}
 
+			String sendData = new String(data);
+
 			ctxt.returnValue = -1;
 
 			Thread.sleep(500);
+
+			long start = System.currentTimeMillis();
+			long duration;
+			float speed;
 
 			Log.d(TAG, "client begin to send data:");
 
 			DataOutputStream writer = new DataOutputStream(localClient.getOutputStream());
 			for (int i = 0; i < ctxt.sentCount; i++) {
-				writer.writeBytes(new String(data));
+				writer.writeBytes(sendData);
+				if (i%10 == 0) Log.d(TAG, "i="+i);
 			}
 
-			Log.d(TAG, String.format("finished sending %d Kbytes data", ctxt.sentCount));
+			long end = System.currentTimeMillis();
+			duration = end - start;
+			speed = (((float)ctxt.sentCount / duration) * 1000);
+
+			Log.d(TAG, String.format("Total %d KB in %d.%d seconds. %.2f KB/s",
+					ctxt.sentCount,	(int)(duration / 1000), (int)(duration % 1000), speed));
 			Log.d(TAG, "client send data in success");
 
 			ctxt.returnValue = 0;
 		}
 		catch (IOException | InterruptedException e) {
+			Log.e(TAG, "clientThreadBody: error");
 			e.printStackTrace();
 		}
 		finally {
@@ -420,7 +458,6 @@ public class PortforwardingTest {
 			int pfid = 0;
 			try {
 				assertTrue(robot.writeCmd(String.format("spfsvcadd %s tcp %s %s", service, Robot.ROBOTHOST, port)));
-
 				String[] args = robot.readAck();
 				assertTrue(args != null && args.length == 2);
 				assertEquals("spfsvcadd", args[0]);
@@ -445,7 +482,7 @@ public class PortforwardingTest {
 				client_ctxt.ip = localIP;
 				client_ctxt.port = shadowPort;
 				client_ctxt.recvCount = 0;
-				client_ctxt.sentCount = 1024;
+				client_ctxt.sentCount = 100;
 				client_ctxt.returnValue = -1;
 
 				Thread clientThread = new Thread(new Runnable() {
@@ -455,6 +492,8 @@ public class PortforwardingTest {
 					}
 				});
 				clientThread.start();
+
+//				Thread.sleep(2000);
 
 				try {
 					clientThread.join();
@@ -468,8 +507,7 @@ public class PortforwardingTest {
 				assertTrue(args != null && args.length == 3);
 				assertEquals("spfrecvdata", args[0]);
 				assertEquals("0", args[1]);
-				assertEquals("1024", args[2]);
-
+				assertEquals("100", args[2]);
 				assertTrue(robot.writeCmd(String.format("spfsvcremove %s", service)));
 			}
 			catch (CarrierException e) {
@@ -477,6 +515,10 @@ public class PortforwardingTest {
 				e.printStackTrace();
 				fail();
 			}
+//			catch (InterruptedException e) {
+//				e.printStackTrace();
+//				fail();
+//			}
 			finally {
 				if (pfid > 0) {
 					try {
@@ -511,10 +553,11 @@ public class PortforwardingTest {
 				});
 				serverThread.start();
 
+//				Thread.sleep(2000);
+
 				session.addService(service, PortForwardingProtocol.TCP, localIP, Integer.toString(port));
 
 				assertTrue(robot.writeCmd(String.format("spfopen %s tcp %s %s", service, Robot.ROBOTHOST, (++shadowPort))));
-
 				String[] args = robot.readAck();
 				assertTrue(args != null && args.length == 2);
 				assertEquals("spfopen", args[0]);
@@ -660,5 +703,10 @@ public class PortforwardingTest {
 		if (isConnectToRobot) {
 			robot.disconnect();
 		}
+	}
+
+	@Before
+	public void setUpCase() {
+		robot.clearSocketBuffer();
 	}
 }

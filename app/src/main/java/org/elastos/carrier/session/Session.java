@@ -51,12 +51,15 @@ public class Session {
 	private Session(String to) {
 		this.to = to;
 		this.didClose = false;
+		Log.d(TAG, "Session identityHashCode:" + System.identityHashCode(this));
 	}
 
 	@Override
 	protected void finalize() throws Throwable {
+		Log.d(TAG, "finalize start identityHashCode:" + System.identityHashCode(this));
 		close();
 		super.finalize();
+		Log.d(TAG, "finalize end identityHashCode:" + System.identityHashCode(this));
 	}
 
 	/**
@@ -67,6 +70,7 @@ public class Session {
 		if (!didClose) {
 
 			Log.d(TAG, "Closing session with " + to + " ...");
+			Log.d(TAG, "close identityHashCode:" + System.identityHashCode(this));
 
 			session_close();
 			didClose = true;
