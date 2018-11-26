@@ -105,8 +105,8 @@ void onSessionRequestCompleteCb(ElaSession* session, const char *bundle, int sta
 
     assert(session);
     assert(status == 0 || (status != 0 && reason));
-    assert(sdp);
-    assert(len > 0);
+//    assert(sdp);
+//    assert(len > 0);
 
     env = attachJvm(&needDetach);
     if (!env) {
