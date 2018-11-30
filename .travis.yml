@@ -113,7 +113,7 @@ script:
         echo "++++";
         echo "| "${Failures}" ";
         if [[ "${TotalCase}" -le 3 ]]; then
-          echo "TestCase do not run, pls check it!"
+          echo "TestCase do not run, pls check it!";
           return -1;
         fi;
         echo "warning! pls check the failed case!";
