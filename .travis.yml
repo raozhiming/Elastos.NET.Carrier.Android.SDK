@@ -106,12 +106,12 @@ script:
         export TEST_INTERRUPT=TRUE;
         return -1;
       fi;
-      if [[ "${Failures}" -ge 3 ]]; then
+      if [[ "${Failures}" -ge 1 ]]; then
         echo "too much Failures";
         return $Failures;
       else
         echo "++++";
-        echo "| "${Failures}" ";
+        echo "|"${Failures}"|";
         if [[ "${TotalCase}" -le 3 ]]; then
           echo "TestCase do not run, pls check it!";
           return -1;
