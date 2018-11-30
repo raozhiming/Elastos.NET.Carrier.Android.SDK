@@ -97,7 +97,7 @@ script:
   - tail -10 test.log
   - export RUN_OK=`tail -10 test.log | grep 'OK ('`
   - if [[ "$RUN_OK" == "" ]]; then
-      tail -10 test.log | grep "Failures" | awk -F "[,:]" '{gsub(/ /,"",$2);gsub(/ /,"",$4);print "TotalCase="$2";Failures="$4}';
+      eval $(tail -10 test.log | grep "Failures" | awk -F "[,:]" '{gsub(/ /,"",$2);gsub(/ /,"",$4);print "TotalCase="$2;print "Failures="$4}');
       echo "AlllCase="${TotalCase}"++-------++";
       echo "Fail="${Failures}"++--------++";
       echo "----";
