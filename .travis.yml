@@ -90,14 +90,15 @@ script:
       fi;
       x=$(( $x + 1 ));
     done
+  - adb shell logcat -c
   - adb shell logcat -v time | grep -E "Test|Debug|RobotConnector|Carrier" &
   - /tmp/carrier/bin/elatests --robot -c /tmp/carrier/etc/carrier/tests.conf &
   - adb shell am instrument -w -r -e debug false -e class 'org.elastos.carrier.RootTestsuite' org.elastos.carrier.test/android.support.test.runner.AndroidJUnitRunner | tee test.log
   - tail -10 test.log
   - export RUN_OK=`tail -10 test.log | grep 'OK ('`
   - if [[ "$RUN_OK" == "" ]]; then
-      eval $(tail -10 test.log | grep "Failures" | awk -F "[,:]" '{gsub(/ /,"",$2);gsub(/ /,"",$4);print "totalCase="$2";Failures="$4}');
-      echo "totalCase="$totalCase;
+      eval $(tail -10 test.log | grep "Failures" | awk -F "[,:]" '{gsub(/ /,"",$2);gsub(/ /,"",$4);print "TotalCase="$2";Failures="$4}');
+      echo "TotalCase="$TotalCase;
       echo "Failures="$Failures;
       echo "----";
       if [[ "$Failures" == "" ]]; then
@@ -110,6 +111,10 @@ script:
         return $Failures;
       else
         echo $Failures;
+        if [[ "$TotalCase" -le 3 ]]; then
+          echo "TestCase do not run, pls check it!"
+          return -1;
+        fi;
         echo "warning! pls check the failed case!";
       fi
     fi
