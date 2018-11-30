@@ -101,11 +101,12 @@ script:
       echo "TotalCase="$TotalCase;
       echo "Failures="$Failures;
       echo "----";
-      if [[ "$Failures" == "" ]]; then
+      if [[ "${Failures}" == "" ]]; then
         echo "test interrupted";
         export TEST_INTERRUPT=TRUE;
         return -1;
       fi;
+      echo "--"${Failures}"--";
       if [[ "${Failures}" -ge 1 ]]; then
         echo "too much Failures";
         return $Failures;
