@@ -713,6 +713,7 @@ public class PortforwardingTest {
     public void tearDownCase() {
         try {
             if (session != null) {
+                Log.d(TAG, "tearDownCase close session");
                 if (stream != null) {
                     session.removeStream(stream);
                     stream = null;
