@@ -611,7 +611,6 @@ public class ChannelTest {
 			synchronized (streamHandler) {
 				streamHandler.wait(1000);
 			}
-
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.TransportReady, data.mState);
 

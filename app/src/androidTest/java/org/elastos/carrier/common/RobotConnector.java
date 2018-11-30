@@ -1,21 +1,14 @@
 package org.elastos.carrier.common;
 
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-
 import org.elastos.carrier.Log;
 import org.elastos.carrier.robot.Robot;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.net.URL;
-
-import static android.content.Context.CONNECTIVITY_SERVICE;
 
 public class RobotConnector extends Socket {
 	private static final String TAG = "RobotConnector";

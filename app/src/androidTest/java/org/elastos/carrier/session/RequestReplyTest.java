@@ -14,6 +14,7 @@ import org.elastos.carrier.common.TestHelper;
 import org.elastos.carrier.common.TestHelper.ITestChannelExecutor;
 import org.elastos.carrier.common.TestOptions;
 import org.elastos.carrier.exceptions.CarrierException;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -406,6 +407,8 @@ public class RequestReplyTest {
 
 			session.removeStream(stream);
 			session.close();
+			stream = null;
+			session = null;
 
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.Closed, data.mState);
@@ -461,5 +464,22 @@ public class RequestReplyTest {
     @Before
     public void setUpCase() {
         robot.clearSocketBuffer();
+    }
+
+
+    @After
+    public void tearDownCase() {
+        try {
+            if (session != null) {
+                if (stream != null) {
+                    session.removeStream(stream);
+                    stream = null;
+                }
+                session.close();
+                session = null;
+            }
+        } catch (CarrierException e) {
+            e.printStackTrace();
+        }
     }
 }

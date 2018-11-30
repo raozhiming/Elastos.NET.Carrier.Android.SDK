@@ -15,6 +15,7 @@ import org.elastos.carrier.common.TestHelper.ITestChannelExecutor;
 import org.elastos.carrier.common.TestOptions;
 import org.elastos.carrier.exceptions.CarrierException;
 import org.elastos.carrier.robot.Robot;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -261,7 +262,6 @@ public class PortforwardingTest {
 			synchronized (streamHandler) {
 				streamHandler.wait(1000);
 			}
-
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.TransportReady, data.mState);
 
@@ -281,7 +281,6 @@ public class PortforwardingTest {
 			assertEquals(0, data.mCompleteStatus);
 
 			args = robot.readAck();
-
 			assertTrue(args != null && args.length == 2);
 			assertEquals("sreply", args[0]);
 			assertEquals("success", args[1]);
@@ -317,6 +316,8 @@ public class PortforwardingTest {
 
 			session.removeStream(stream);
 			session.close();
+            stream = null;
+            session = null;
 
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.Closed, data.mState);
@@ -331,12 +332,10 @@ public class PortforwardingTest {
 	private void serverThreadBody(final LocalPortforwardingData ctxt) {
 		try {
 			ctxt.returnValue = -1;
-
 			localServer = new ServerSocket(port, 10, InetAddress.getByName(localIP));
 			Log.d(TAG, "server begin to receive data:");
 
 			Socket client = localServer.accept();
-			Log.d(TAG, "serverThreadBody after accept");
 			DataInputStream reader = new DataInputStream(client.getInputStream());
 			int readLen;
 			byte[] dataBuffer = new byte[1024];
@@ -709,4 +708,20 @@ public class PortforwardingTest {
 	public void setUpCase() {
 		robot.clearSocketBuffer();
 	}
+
+    @After
+    public void tearDownCase() {
+        try {
+            if (session != null) {
+                if (stream != null) {
+                    session.removeStream(stream);
+                    stream = null;
+                }
+                session.close();
+                session = null;
+            }
+        } catch (CarrierException e) {
+            e.printStackTrace();
+        }
+    }
 }

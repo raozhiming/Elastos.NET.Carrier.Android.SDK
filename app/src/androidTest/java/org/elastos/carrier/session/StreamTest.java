@@ -13,6 +13,7 @@ import org.elastos.carrier.common.TestContext;
 import org.elastos.carrier.common.TestHelper;
 import org.elastos.carrier.common.TestOptions;
 import org.elastos.carrier.exceptions.CarrierException;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -241,7 +242,6 @@ public class StreamTest {
 				int rc = 0;
 				byte[] charBytes = TestHelper.getBytes(packet);
 				long start = System.currentTimeMillis();
-
 				for (int i = 0; i < packet_count; i++) {
 					int sent = 0;
 
@@ -250,7 +250,6 @@ public class StreamTest {
 							rc = stream.writeData(charBytes, sent, packet_size - sent);
 						}
 						catch (CarrierException e) {
-							e.printStackTrace();
 							int errorCode = e.getErrorCode();
 							if (errorCode == 0x81000010) {
 								try {
@@ -263,6 +262,7 @@ public class StreamTest {
 								continue;
 							}
 							else {
+								e.printStackTrace();
 								Log.d(TAG, String.format("Write data failed: 0x%s.", Integer.toHexString(errorCode)));
 								return;
 							}
@@ -396,6 +396,8 @@ public class StreamTest {
 
 			session.removeStream(stream);
 			session.close();
+			stream = null;
+			session = null;
 
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.Closed, data.mState);
@@ -539,5 +541,22 @@ public class StreamTest {
 	@Before
 	public void setUpCase() {
 		robot.clearSocketBuffer();
+	}
+
+
+	@After
+	public void tearDownCase() {
+		try {
+			if (session != null) {
+				if (stream != null) {
+					session.removeStream(stream);
+					stream = null;
+				}
+				session.close();
+				session = null;
+			}
+		} catch (CarrierException e) {
+			e.printStackTrace();
+		}
 	}
 }
