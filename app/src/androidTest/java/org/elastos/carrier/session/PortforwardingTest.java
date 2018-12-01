@@ -314,10 +314,10 @@ public class PortforwardingTest {
 				channelExecutor.executor();
 			}
 
-			// session.removeStream(stream);
-			// session.close();
-			// stream = null;
-			// session = null;
+			session.removeStream(stream);
+			session.close();
+			stream = null;
+			session = null;
 
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.Closed, data.mState);
