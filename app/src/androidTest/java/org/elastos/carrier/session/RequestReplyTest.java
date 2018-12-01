@@ -303,10 +303,10 @@ public class RequestReplyTest {
 				channelExecutor.executor();
 			}
 
-			session.removeStream(stream);
-			session.close();
-			stream = null;
-			session = null;
+			// session.removeStream(stream);
+			// session.close();
+			// stream = null;
+			// session = null;
 
 			data = (LocalData)context.getExtra().getExtraData();
 			assertEquals(StreamState.Closed, data.mState);
@@ -469,20 +469,20 @@ public class RequestReplyTest {
     }
 
 
-    @After
-    public void tearDownCase() {
-        try {
-            if (session != null) {
-                Log.d(TAG, "tearDownCase close session");
-                if (stream != null) {
-                    session.removeStream(stream);
-                    stream = null;
-                }
-                session.close();
-                session = null;
-            }
-        } catch (CarrierException e) {
-            e.printStackTrace();
-        }
-    }
+    // @After
+    // public void tearDownCase() {
+    //     try {
+    //         if (session != null) {
+    //             Log.d(TAG, "tearDownCase close session");
+    //             if (stream != null) {
+    //                 session.removeStream(stream);
+    //                 stream = null;
+    //             }
+    //             session.close();
+    //             session = null;
+    //         }
+    //     } catch (CarrierException e) {
+    //         e.printStackTrace();
+    //     }
+    // }
 }
